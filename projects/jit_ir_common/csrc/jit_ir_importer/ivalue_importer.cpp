@@ -108,6 +108,8 @@ public:
 
 private:
   MlirValue rawImportIValue(c10::IValue ivalue);
+  MlirValue createTensorLiteralReprVal(const at::Tensor &tensor,
+                                       MlirLocation loc);
   MlirValue importTensor(c10::IValue ivalue);
   MlirValue importModule(torch::jit::Module jitModule);
   void importMethod(torch::jit::Function *function, MlirBlock classTypeBody,
@@ -365,24 +367,37 @@ MlirValue IValueImporter::rawImportIValue(c10::IValue ivalue) {
           torchMlirTorchLinearParamsTypeGet(context), weightValue, biasValue);
       return mlirOperationGetResult(operation, 0);
     }
+    if (ivalue.type().get() ==
+        c10::getCustomClassType<c10::intrusive_ptr<ConvPackedParamsBase<2>>>()
+            .get()) {
+      c10::intrusive_ptr<ConvPackedParamsBase<2>> conv2dParams =
+          ivalue.toCustomClass<ConvPackedParamsBase<2>>();
+      at::Tensor weight;
+      c10::optional<at::Tensor> bias;
+      std::tie(weight, bias) = conv2dParams->unpack();
+      MlirValue weightValue = importIValue(c10::IValue(weight));
+      c10::optional<MlirValue> biasValue = c10::nullopt;
+      if (bias.has_value()) {
+        biasValue = importIValue(c10::IValue(*bias));
+      }
+      MlirOperation operation = createMlirOperationAtEnd(
+          importBlock, "torch.conv2d_params.create", loc,
+          torchMlirTorchConv2dParamsTypeGet(context), weightValue, biasValue);
+      return mlirOperationGetResult(operation, 0);
+    }
   }
   std::stringstream msg;
   msg << "Unsupported ivalue: " << ivalue;
   throw std::invalid_argument(msg.str());
 }
 
-MlirValue IValueImporter::importTensor(c10::IValue ivalue) {
-  assert(ivalue.isTensor() && "expected a tensor!");
+namespace {
 
-  // TODO: Can we do better?
-  MlirLocation loc = mlirLocationUnknownGet(context);
-
-  // Import the bulk tensor representation.
-  at::Tensor tensor = ivalue.toTensor().contiguous();
+MlirValue IValueImporter::createTensorLiteralReprVal(
+  const at::Tensor &tensor, MlirLocation loc
+) {
   MlirAttribute denseElements = convertTensorToMlirElementsAttr(tensor, loc);
-
   MlirOperation tensorOp;
-
   if (importOptions.assumeTensorsHaveValueSemantics) {
     tensorOp = createMlirOperationAtEnd(
         importBlock, "torch.vtensor.literal", loc,
@@ -394,8 +409,20 @@ MlirValue IValueImporter::importTensor(c10::IValue ivalue) {
         torchMlirTorchNonValueTensorTypeGetFromAttribute(denseElements),
         toMlirNamedAttribute("value", denseElements));
   }
+  return mlirOperationGetResult(tensorOp, 0);
+}
 
-  MlirValue tensorReprValue = mlirOperationGetResult(tensorOp, 0);
+} // Namespace
+
+MlirValue IValueImporter::importTensor(c10::IValue ivalue) {
+  assert(ivalue.isTensor() && "expected a tensor!");
+
+  // TODO: Can we do better?
+  MlirLocation loc = mlirLocationUnknownGet(context);
+
+  // Import the bulk tensor representation.
+  at::Tensor tensor = ivalue.toTensor().contiguous();
+  MlirValue tensorReprValue = createTensorLiteralReprVal(tensor, loc);
 
   // Construct the complete tensor value. This is trivial for most tensors, but
   // for quantized tensors (and probably sparse too, TBD) there is more for us
@@ -423,6 +450,15 @@ MlirValue IValueImporter::importTensor(c10::IValue ivalue) {
       MlirOperation quantizedTensor = createMlirOperationAtEnd(
           importBlock, "torch.per_tensor_affine.create", loc,
           quantizedTensorType, tensorReprValue, qScale, zeroPoint);
+      tensorValue = mlirOperationGetResult(quantizedTensor, 0);
+    } else if (tensor.qscheme() == c10::kPerChannelAffine) {
+      MlirValue qScale = createTensorLiteralReprVal(
+        tensor.q_per_channel_scales(), loc);
+      MlirValue qZeroPoint = createTensorLiteralReprVal(
+        tensor.q_per_channel_zero_points(), loc);
+      MlirOperation quantizedTensor = createMlirOperationAtEnd(
+          importBlock, "torch.per_channel_affine.create", loc,
+          quantizedTensorType, tensorReprValue, qScale, qZeroPoint);
       tensorValue = mlirOperationGetResult(quantizedTensor, 0);
     } else {
       std::stringstream msg;

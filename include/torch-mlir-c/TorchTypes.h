@@ -195,6 +195,20 @@ torchMlirTorchLinearParamsTypeGet(MlirContext context);
 MLIR_CAPI_EXPORTED MlirTypeID torchMlirTorchLinearParamsTypeGetTypeID();
 
 //===----------------------------------------------------------------------===//
+// torch.Conv2dParams type.
+//===----------------------------------------------------------------------===//
+
+/// Checks whether the given type is a !torch.Conv2dParams type
+MLIR_CAPI_EXPORTED bool torchMlirTypeIsATorchConv2dParams(MlirType t);
+
+/// Gets the !torch.Conv2dParams type.
+MLIR_CAPI_EXPORTED MlirType
+torchMlirTorchConv2dParamsTypeGet(MlirContext context);
+
+/// Gets the !torch.Conv2dParams typeid.
+MLIR_CAPI_EXPORTED MlirTypeID torchMlirTorchLinearConv2dTypeGetTypeID();
+
+//===----------------------------------------------------------------------===//
 // torch.qint8 type.
 //===----------------------------------------------------------------------===//
 

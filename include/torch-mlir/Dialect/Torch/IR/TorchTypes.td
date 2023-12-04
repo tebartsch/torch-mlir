@@ -326,6 +326,15 @@ def Torch_LinearParamsType : Torch_Type<"LinearParams", "LinearParams"> {
   }];
 }
 
+def Torch_Conv2dParamsType : Torch_Type<"Conv2dParams", "Conv2dParams"> {
+  let summary = "Torch packed conv2d params type";
+  let description = [{
+    This is used to model the
+    `__torch__.torch.classes.quantized.Conv2dPackedParamsBase` custom C++ class
+    type which is the input to some Torch `quantized::` ops.
+  }];
+}
+
 def Torch_AnyType : Torch_Type<"Any", "any"> {
   let summary = "Torch any type";
   let description = [{
@@ -429,6 +438,7 @@ def AnyTorchType : AnyTypeOf<[
   AnyTorchTensorType,
   Torch_AnyType,
   Torch_BoolType,
+  Torch_Conv2dParamsType,
   Torch_DictType,
   Torch_DeviceType,
   Torch_GeneratorType,

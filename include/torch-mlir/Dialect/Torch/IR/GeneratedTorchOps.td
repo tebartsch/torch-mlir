@@ -14356,3 +14356,34 @@ def Torch_QuantizedLinearOp : Torch_Op<"quantized.linear", [
   }];
 }
 
+def Torch_QuantizedConv2dOp : Torch_Op<"quantized.conv2d", [
+    HasValueSemantics,
+    AllowsTypeRefinement,
+    HasValueSemantics,
+    ReadOnly
+  ]> {
+  let summary = "Generated op for `quantized::conv2d : (Tensor, __torch__.torch.classes.quantized.Conv2dPackedParamsBase, int[], int[], int[], int, float, int) -> (Tensor)`";
+  let arguments = (ins
+    AnyTorchTensorType:$qx,
+    Torch_Conv2dParamsType:$weight,
+    AnyTorchListOfTorchIntType:$stride,
+    AnyTorchListOfTorchIntType:$padding,
+    AnyTorchListOfTorchIntType:$dilation,
+    Torch_IntType:$groups,
+    Torch_FloatType:$output_scale,
+    Torch_IntType:$output_zero_point
+  );
+  let results = (outs
+    AnyTorchTensorType:$result
+  );
+  let hasCustomAssemblyFormat = 1;
+  let extraClassDefinition = [{
+    ParseResult QuantizedConv2dOp::parse(OpAsmParser &parser, OperationState &result) {
+      return parseDefaultTorchOp(parser, result, 8, 1);
+    }
+    void QuantizedConv2dOp::print(OpAsmPrinter &printer) {
+      printDefaultTorchOp(printer, *this, 8, 1);
+    }
+  }];
+}
+

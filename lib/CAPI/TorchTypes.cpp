@@ -238,6 +238,22 @@ MlirTypeID torchMlirTorchLinearParamsTypeGetTypeID() {
 }
 
 //===----------------------------------------------------------------------===//
+// torch.Conv2dParams type.
+//===----------------------------------------------------------------------===//
+
+bool torchMlirTypeIsATorchConv2dParams(MlirType t) {
+  return unwrap(t).isa<Torch::Conv2dParamsType>();
+}
+
+MlirType torchMlirTorchConv2dParamsTypeGet(MlirContext context) {
+  return wrap(Torch::Conv2dParamsType::get(unwrap(context)));
+}
+
+MlirTypeID torchMlirTorchConv2dParamsTypeGetTypeID() {
+  return wrap(Torch::Conv2dParamsType::getTypeID());
+}
+
+//===----------------------------------------------------------------------===//
 // torch.qint8 type.
 //===----------------------------------------------------------------------===//
 

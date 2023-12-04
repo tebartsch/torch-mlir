@@ -115,12 +115,15 @@ static MlirType mapCustomClassType(MlirContext context, MlirLocation loc,
   if (name == "__torch__.torch.classes.quantized.LinearPackedParamsBase") {
     return torchMlirTorchLinearParamsTypeGet(context);
   }
+  if (name == "__torch__.torch.classes.quantized.Conv2dPackedParamsBase") {
+    return torchMlirTorchConv2dParamsTypeGet(context);
+  }
 
   // At this point, we know that the type is indeed a custom class type, but
   // that we don't know how to specially import it. We cannot proceed, so emit a
   // diagnostic and halt compilation.
   std::stringstream message;
-  message << "unable to import Torch CustomClass type '" << classType
+  message << "unable to import Torch CustomClass type '" << *classType
           << "' to MLIR type";
   mlirEmitError(loc, message.str().c_str());
   throw mlir_diagnostic_emitted();

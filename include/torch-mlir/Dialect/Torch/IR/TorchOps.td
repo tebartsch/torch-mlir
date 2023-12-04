@@ -865,6 +865,22 @@ def Torch_LinearParamsCreateOp : Torch_Op<"linear_params.create", [
   }];
 }
 
+def Torch_Conv2dParamsCreateOp : Torch_Op<"conv2d_params.create", [
+    AllowsTypeRefinement,
+    AllowedInModuleInitializer,
+  ]> {
+  let summary = "Create a `!torch.Conv2dParams`";
+  let arguments = (ins
+    AnyTorchTensorType:$weight,
+    Optional<AnyTorchTensorType>:$bias
+  );
+  let results = (outs Torch_Conv2dParamsType:$result);
+
+  let assemblyFormat = [{
+    $weight (`,` $bias^)? attr-dict `:` qualified(type($weight)) (`,` qualified(type($bias))^)?
+  }];
+}
+
 def Torch_PerTensorAffineCreateOp : Torch_Op<"per_tensor_affine.create", [
     AllowsTypeRefinement,
     AllowedInModuleInitializer,
@@ -885,6 +901,37 @@ def Torch_PerTensorAffineCreateOp : Torch_Op<"per_tensor_affine.create", [
     AnyTorchTensorType:$int_repr,
     Torch_FloatType:$scale,
     Torch_IntType:$offset
+  );
+  // TODO: Limit to quantized dtypes (e.g. !torch.qint8).
+  let results = (outs AnyTorchTensorType:$result);
+
+  let assemblyFormat = [{
+    $int_repr `,` $scale `,` $offset attr-dict
+    `:` qualified(type($int_repr)) `,` qualified(type($scale)) `,` qualified(type($offset)) `->` qualified(type($result))
+  }];
+}
+
+def Torch_PerChannelAffineCreateOp : Torch_Op<"per_channel_affine.create", [
+    AllowsTypeRefinement,
+    AllowedInModuleInitializer,
+  ]> {
+  let summary = "Create a per-channel-affine quantized tensor";
+  let description = [{
+    Create a channel-wise quantized tensor.
+
+    Quantization formula is:
+    ```
+    Q(x, scale, zero_point) = round(x/scale + zero_point)
+    ```
+
+    See:
+    https://pytorch.org/docs/stable/quantization.html#quantized-tensors
+  }];
+  let arguments = (ins
+    AnyTorchTensorType:$int_repr,
+    // TODO: Limit scale and offset to float and integer respectively
+    AnyTorchTensorType:$scale,
+    AnyTorchTensorType:$offset
   );
   // TODO: Limit to quantized dtypes (e.g. !torch.qint8).
   let results = (outs AnyTorchTensorType:$result);

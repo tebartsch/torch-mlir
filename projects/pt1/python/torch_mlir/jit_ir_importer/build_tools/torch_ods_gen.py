@@ -50,6 +50,7 @@ TORCH_TYPE_TO_ODS_TYPE = {
     "str[]": "AnyTorchListOfTorchStringType",
     "Dict": "Torch_DictType",
     "__torch__.torch.classes.quantized.LinearPackedParamsBase": "Torch_LinearParamsType",
+    "__torch__.torch.classes.quantized.Conv2dPackedParamsBase": "Torch_Conv2dParamsType",
 }
 
 TORCH_NON_VALUE_TYPE_TO_ODS_TYPE = {
@@ -833,6 +834,9 @@ def emit_ops(emitter_td: TextEmitter, registry: Registry):
 
     emit(
         "quantized::linear : (Tensor, __torch__.torch.classes.quantized.LinearPackedParamsBase, float, int) -> (Tensor)",
+        traits=["HasValueSemantics"])
+    emit(
+        "quantized::conv2d : (Tensor, __torch__.torch.classes.quantized.Conv2dPackedParamsBase, int[], int[], int[], int, float, int) -> (Tensor)",
         traits=["HasValueSemantics"])
 
 
